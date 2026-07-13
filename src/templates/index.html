@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>File Server</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #0f172a; color: #e2e8f0; min-height: 100vh;
+  }
+  .container { max-width: 900px; margin: 0 auto; padding: 24px 16px; }
+
+  .login-screen {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; padding: 24px;
+  }
+  .login-card {
+    background: linear-gradient(135deg, #1e293b, #334155);
+    border-radius: 16px; padding: 40px 32px; text-align: center;
+    width: 100%; max-width: 400px; border: 1px solid #475569;
+  }
+  .login-title { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+  .login-desc { font-size: 14px; color: #94a3b8; margin-bottom: 24px; }
+  .login-input {
+    width: 100%; background: #0f172a; border: 1px solid #334155;
+    border-radius: 8px; padding: 14px 16px; color: #e2e8f0;
+    font-size: 28px; text-align: center; letter-spacing: 8px;
+    font-family: 'Courier New', monospace; outline: none;
+  }
+  .login-input:focus { border-color: #38bdf8; }
+  .login-btn {
+    width: 100%; margin-top: 16px; background: #38bdf8; border: none;
+    border-radius: 8px; padding: 14px; color: #0f172a; font-weight: 700;
+    font-size: 16px; cursor: pointer; transition: background 0.15s;
+  }
+  .login-btn:hover { background: #7dd3fc; }
+  .login-error { color: #ef4444; font-size: 14px; margin-top: 12px; display: none; }
+  .login-hint { font-size: 12px; color: #64748b; margin-top: 16px; }
+
+  .main-ui { display: none; }
+
+  .header-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 20px; padding: 12px 16px; background: #1e293b;
+    border-radius: 12px; border: 1px solid #334155;
+  }
+  .header-bar .ip { font-size: 12px; color: #94a3b8; }
+  .header-bar .ip span { color: #38bdf8; }
+  .header-bar .logout-btn {
+    background: none; border: 1px solid #475569; color: #94a3b8;
+    border-radius: 6px; padding: 6px 12px; font-size: 12px; cursor: pointer;
+  }
+  .header-bar .logout-btn:hover { border-color: #ef4444; color: #ef4444; }
+
+  .panel {
+    background: #1e293b; border-radius: 12px; padding: 20px;
+    margin-bottom: 20px; border: 1px solid #334155;
+  }
+  .panel h2 { font-size: 16px; margin-bottom: 16px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
+
+  .upload-area {
+    border: 2px dashed #475569; border-radius: 8px; padding: 24px;
+    text-align: center; cursor: pointer; transition: all 0.2s;
+  }
+  .upload-area:hover, .upload-area.dragover { border-color: #38bdf8; background: #0f172a; }
+  .upload-area p { color: #94a3b8; font-size: 14px; }
+  .upload-area .icon { font-size: 32px; margin-bottom: 8px; }
+
+  .file-item {
+    display: flex; align-items: center; padding: 12px 16px;
+    border-bottom: 1px solid #334155; transition: background 0.15s;
+  }
+  .file-item:hover { background: #0f172a; }
+  .file-item:last-child { border-bottom: none; }
+  .file-icon { font-size: 20px; margin-right: 12px; color: #64748b; }
+  .file-icon.is-dir { color: #fbbf24; }
+  .file-name { flex: 1; font-size: 14px; word-break: break-all; }
+  .file-size { color: #64748b; font-size: 12px; margin: 0 16px; white-space: nowrap; }
+  .file-actions { display: flex; gap: 6px; }
+  .file-actions button {
+    background: none; border: 1px solid #475569; color: #94a3b8;
+    border-radius: 6px; padding: 4px 10px; font-size: 12px; cursor: pointer; transition: all 0.15s;
+  }
+  .file-actions .btn-download:hover { border-color: #22c55e; color: #22c55e; }
+  .file-actions .btn-delete:hover { border-color: #ef4444; color: #ef4444; }
+
+  .empty-state { text-align: center; padding: 40px 20px; color: #475569; }
+  .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+
+  .btn {
+    background: #38bdf8; border: none; border-radius: 6px; padding: 8px 16px;
+    color: #0f172a; font-weight: 600; font-size: 14px; cursor: pointer; transition: background 0.15s;
+  }
+  .btn:hover { background: #7dd3fc; }
+  .btn-secondary { background: #334155; color: #e2e8f0; }
+  .btn-secondary:hover { background: #475569; }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: #1e293b; color: #e2e8f0; padding: 12px 24px; border-radius: 8px;
+    border: 1px solid #334155; font-size: 14px; box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 100;
+  }
+  .toast.show { opacity: 1; }
+
+  @media (max-width: 600px) {
+    .file-item { flex-wrap: wrap; gap: 8px; }
+    .file-size { margin: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="login-screen" id="loginScreen">
+    <div class="login-card">
+      <div class="login-title">🔐 File Server</div>
+      <div class="login-desc">請輸入伺服器終端機顯示的配對碼</div>
+      <input type="text" class="login-input" id="pairInput" maxlength="6" inputmode="numeric"
+             placeholder="000000" oninput="this.value=this.value.replace(/\D/g,'')">
+      <button class="login-btn" onclick="login()">連線</button>
+      <div class="login-error" id="loginError">配對碼錯誤，請重試</div>
+      <div class="login-hint">配對碼請看電腦終端機畫面</div>
+    </div>
+  </div>
+
+  <div class="main-ui" id="mainUI">
+
+    <div class="header-bar">
+      <div class="ip">伺服器: <span id="serverIP">{{ local_ip }}:{{ port }}</span></div>
+      <button class="logout-btn" onclick="logout()">🔒 鎖定</button>
+    </div>
+
+    <div class="panel">
+      <h2>📤 上傳</h2>
+      <div style="display:flex; gap:8px; margin-bottom:12px">
+        <button class="btn btn-secondary" id="modeFile" onclick="setMode('file')" style="flex:1">📄 檔案</button>
+        <button class="btn" id="modeFolder" onclick="setMode('folder')" style="flex:1">📁 資料夾</button>
+      </div>
+      <div class="upload-area" id="uploadArea">
+        <div class="icon">⬆</div>
+        <p id="uploadHint">點此選取檔案上傳</p>
+      </div>
+      <input type="file" id="fileInput" multiple style="display:none">
+    </div>
+
+    <div class="panel">
+      <h2>📋 檔案列表</h2>
+      <div id="fileList"></div>
+    </div>
+
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const LS_KEY = 'file_server_code';
+const TOAST = document.getElementById('toast');
+const LOGIN_SCREEN = document.getElementById('loginScreen');
+const MAIN_UI = document.getElementById('mainUI');
+const FILE_LIST = document.getElementById('fileList');
+const FILE_INPUT = document.getElementById('fileInput');
+const UPLOAD_AREA = document.getElementById('uploadArea');
+const PAIR_INPUT = document.getElementById('pairInput');
+const LOGIN_ERROR = document.getElementById('loginError');
+
+let pairCode = '';
+let uploadMode = 'file';
+
+function setMode(mode) {
+  uploadMode = mode;
+  document.getElementById('modeFile').className = mode === 'file' ? 'btn' : 'btn btn-secondary';
+  document.getElementById('modeFolder').className = mode === 'folder' ? 'btn' : 'btn btn-secondary';
+  const hint = document.getElementById('uploadHint');
+  if (mode === 'folder') {
+    FILE_INPUT.removeAttribute('multiple');
+    FILE_INPUT.setAttribute('webkitdirectory', '');
+    FILE_INPUT.setAttribute('directory', '');
+    hint.textContent = '點此選取整個資料夾上傳';
+  } else {
+    FILE_INPUT.removeAttribute('webkitdirectory');
+    FILE_INPUT.removeAttribute('directory');
+    FILE_INPUT.setAttribute('multiple', '');
+    hint.textContent = '點此選取檔案上傳';
+  }
+}
+
+function showToast(msg, isError) {
+  TOAST.textContent = msg;
+  TOAST.style.color = isError ? '#ef4444' : '#e2e8f0';
+  TOAST.classList.add('show');
+  setTimeout(() => TOAST.classList.remove('show'), 2500);
+}
+
+function login() {
+  const code = PAIR_INPUT.value.trim();
+  if (code.length < 4) { LOGIN_ERROR.style.display = 'block'; return; }
+  pairCode = code;
+  fetch('/api/files', { headers: { 'X-Pair-Code': pairCode } })
+    .then(r => {
+      if (r.status === 401) { LOGIN_ERROR.style.display = 'block'; pairCode = ''; throw new Error('auth'); }
+      if (!r.ok) throw new Error('error');
+      return r.json();
+    })
+    .then(files => {
+      LOGIN_ERROR.style.display = 'none';
+      sessionStorage.setItem(LS_KEY, pairCode);
+      LOGIN_SCREEN.style.display = 'none';
+      MAIN_UI.style.display = 'block';
+      renderFiles(files);
+    })
+    .catch(err => {
+      if (err.message !== 'auth') showToast('連線失敗', true);
+    });
+}
+
+function logout() {
+  pairCode = '';
+  sessionStorage.removeItem(LS_KEY);
+  MAIN_UI.style.display = 'none';
+  LOGIN_SCREEN.style.display = 'flex';
+  PAIR_INPUT.value = '';
+  LOGIN_ERROR.style.display = 'none';
+}
+
+// Auto-login if code in session
+(function init() {
+  const saved = sessionStorage.getItem(LS_KEY);
+  if (saved) {
+    pairCode = saved;
+    fetch('/api/files', { headers: { 'X-Pair-Code': pairCode } })
+      .then(r => {
+        if (r.status === 401) { sessionStorage.removeItem(LS_KEY); pairCode = ''; return; }
+        if (!r.ok) throw new Error();
+        return r.json();
+      })
+      .then(files => {
+        if (files) {
+          LOGIN_SCREEN.style.display = 'none';
+          MAIN_UI.style.display = 'block';
+          renderFiles(files);
+        }
+      })
+      .catch(() => {});
+  }
+})();
+
+function renderFiles(files) {
+  if (!files || files.length === 0) {
+    FILE_LIST.innerHTML = '<div class="empty-state"><div class="icon">📭</div><p>共享目錄中還沒有檔案</p></div>';
+    return;
+  }
+  let html = '';
+  for (const f of files) {
+    const icon = f.is_dir ? '📁' : '📄';
+    const size = f.size > 0 ? f.size.toLocaleString() + ' B' : '';
+    html += '<div class="file-item">'
+      + '<div class="file-icon' + (f.is_dir ? ' is-dir' : '') + '">' + icon + '</div>'
+      + '<div class="file-name">' + escapeHtml(f.name) + '</div>'
+      + '<div class="file-size">' + size + '</div>'
+      + '<div class="file-actions">'
+      + '<button class="btn-download" onclick="downloadFile(\'' + escapeJs(f.name) + '\')">'
+      + (f.is_dir ? '📥 ZIP' : '下載') + '</button>'
+      + '<button class="btn-delete" onclick="deleteFile(\'' + escapeJs(f.name) + '\')">刪除</button>'
+      + '</div></div>';
+  }
+  FILE_LIST.innerHTML = html;
+}
+
+function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escapeJs(s) { return s.replace(/'/g,"\\'").replace(/"/g,'&quot;'); }
+
+// Upload
+UPLOAD_AREA.addEventListener('click', () => FILE_INPUT.click());
+UPLOAD_AREA.addEventListener('dragover', e => { e.preventDefault(); UPLOAD_AREA.classList.add('dragover'); });
+UPLOAD_AREA.addEventListener('dragleave', () => UPLOAD_AREA.classList.remove('dragover'));
+UPLOAD_AREA.addEventListener('drop', e => {
+  e.preventDefault(); UPLOAD_AREA.classList.remove('dragover');
+  if (e.dataTransfer.files.length > 0) doUpload(e.dataTransfer.files);
+});
+FILE_INPUT.addEventListener('change', () => {
+  if (FILE_INPUT.files.length > 0) { doUpload(FILE_INPUT.files); FILE_INPUT.value = ''; }
+});
+
+function doUpload(files) {
+  const formData = new FormData();
+  for (const f of files) {
+    const path = f.webkitRelativePath || f.name;
+    formData.append('file', f, path);
+  }
+  fetch('/api/upload', {
+    method: 'POST', headers: { 'X-Pair-Code': pairCode }, body: formData
+  })
+  .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+  .then(data => { showToast(data.message); refreshList(); })
+  .catch(() => showToast('上傳失敗', true));
+}
+
+function downloadFile(name) {
+  fetch('/api/files/' + encodeURIComponent(name) + '?t=' + Date.now(), {
+    headers: { 'X-Pair-Code': pairCode }
+  })
+  .then(r => { if (!r.ok) throw new Error(); return r.blob(); })
+  .then(blob => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+  })
+  .catch(() => showToast('下載失敗', true));
+}
+
+function deleteFile(name) {
+  if (!confirm('確定刪除「' + name + '」？')) return;
+  fetch('/api/files/' + encodeURIComponent(name), {
+    method: 'DELETE', headers: { 'X-Pair-Code': pairCode }
+  })
+  .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+  .then(data => { showToast(data.message); refreshList(); })
+  .catch(() => showToast('刪除失敗', true));
+}
+
+function refreshList() {
+  fetch('/api/files', { headers: { 'X-Pair-Code': pairCode } })
+    .then(r => r.json())
+    .then(files => renderFiles(files))
+    .catch(() => showToast('重新整理失敗', true));
+}
+</script>
+
+</body>
+</html>
