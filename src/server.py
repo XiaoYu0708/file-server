@@ -30,6 +30,17 @@ LOCAL_IP = None
 PORT = 5000
 
 
+def find_free_port(start=5000, end=5100):
+    for port in range(start, end + 1):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                s.bind(('0.0.0.0', port))
+                return port
+            except OSError:
+                continue
+    return start
+
+
 def pick_shared_path():
     try:
         import tkinter as tk
@@ -252,6 +263,9 @@ if __name__ == '__main__':
     SHARED_PATH = pick_shared_path()
     PAIR_CODE = generate_pair_code()
     LOCAL_IP = get_local_ip()
+    PORT = find_free_port()
+    if PORT != 5000:
+        print(f"⚠️  Port 5000 已被占用，自動切換至 Port {PORT}")
     print(f"\n✅ 共享目錄: {SHARED_PATH}")
     print_server_banner()
     app.run(host='0.0.0.0', port=PORT, debug=False)
