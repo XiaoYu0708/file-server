@@ -206,6 +206,7 @@ let sessionId = '';
 let uploadMode = 'file';
 let pollTimer = null;
 let pairedPollTimer = null;
+let filePollTimer = null;
 
 function showToast(msg, isError) {
   TOAST.textContent = msg;
@@ -274,6 +275,15 @@ function stopPolling() {
   if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
 }
 
+function startFilePolling() {
+  stopFilePolling();
+  filePollTimer = setInterval(refreshList, 2000);
+}
+
+function stopFilePolling() {
+  if (filePollTimer) { clearInterval(filePollTimer); filePollTimer = null; }
+}
+
 function startPairedPolling() {
   stopPairedPolling();
   pairedPollTimer = setInterval(async () => {
@@ -293,6 +303,7 @@ function stopPairedPolling() {
 }
 
 function returnToPairing() {
+  stopFilePolling();
   MAIN_UI.style.display = 'none';
   PAIRING_SCREEN.style.display = 'flex';
   PAIR_SUCCESS.style.display = 'none';
@@ -366,6 +377,7 @@ function enterMainUI(pairedCode) {
   PAIRED_CODE.textContent = pairedCode || '??';
   refreshList();
   startPairedPolling();
+  startFilePolling();
 }
 
 // ─── Files ────────────────────────────────────────────────
