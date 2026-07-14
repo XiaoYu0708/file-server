@@ -1,5 +1,4 @@
 import os
-import sys
 import io
 import zipfile
 import socket
@@ -17,17 +16,10 @@ try:
 except ImportError:
     pass
 
-if getattr(sys, 'frozen', False):
-    template_dir = os.path.join(sys._MEIPASS, 'templates')
-    app = Flask(__name__, template_folder=template_dir)
-else:
-    app = Flask(__name__)
+app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024
 
-if getattr(sys, 'frozen', False):
-    BASE_DIR = Path(sys.executable).parent / 'data'
-else:
-    BASE_DIR = Path.cwd() / 'data'
+BASE_DIR = Path.cwd() / 'data'
 ROOMS_DIR = BASE_DIR / 'rooms'
 ROOMS_DIR.mkdir(parents=True, exist_ok=True)
 

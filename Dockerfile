@@ -1,8 +1,12 @@
-FROM cdrx/pyinstaller-windows:python3 AS builder
+FROM python:3.12-slim
 
-WORKDIR /src
+WORKDIR /app
+
 COPY requirements.txt .
-RUN pip install -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY src/ ./src/
-RUN pyinstaller --onefile --console --name file_server --add-data "src/templates;templates" src/server.py
+
+EXPOSE 5000
+
+CMD ["python", "src/server.py"]
