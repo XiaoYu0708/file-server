@@ -33,7 +33,7 @@
 
   .pair-input-group { display: flex; gap: 8px; }
   .pair-input {
-    flex: 1; background: #0f172a; border: 1px solid #334155; border-radius: 8px;
+    flex: 1; min-width: 0; background: #0f172a; border: 1px solid #334155; border-radius: 8px;
     padding: 12px 16px; color: #e2e8f0; font-size: 20px; text-align: center;
     letter-spacing: 4px; font-family: 'Courier New', monospace; outline: none;
     text-transform: uppercase;
@@ -41,7 +41,7 @@
   .pair-input:focus { border-color: #38bdf8; }
   .pair-input::placeholder { font-size: 14px; color: #475569; letter-spacing: 1px; }
   .pair-btn {
-    background: #38bdf8; border: none; border-radius: 8px; padding: 12px 20px;
+    flex-shrink: 0; background: #38bdf8; border: none; border-radius: 8px; padding: 12px 20px;
     color: #0f172a; font-weight: 700; font-size: 14px; cursor: pointer; white-space: nowrap;
   }
   .pair-btn:hover { background: #7dd3fc; }
@@ -114,6 +114,13 @@
   }
   .toast.show { opacity: 1; }
 
+  @media (max-width: 480px) {
+    .my-code { font-size: 40px; letter-spacing: 10px; }
+    .pair-input-group { flex-direction: column; }
+    .pair-btn { width: 100%; text-align: center; }
+    .file-item { flex-wrap: wrap; gap: 8px; }
+    .file-size { margin: 0; }
+  }
   @media (max-width: 600px) {
     .my-code { font-size: 48px; letter-spacing: 12px; }
     .file-item { flex-wrap: wrap; gap: 8px; }
