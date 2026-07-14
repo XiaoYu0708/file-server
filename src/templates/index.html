@@ -205,6 +205,7 @@ const PAIRED_CODE = document.getElementById('pairedCode');
 let sessionId = '';
 let uploadMode = 'file';
 let pollTimer = null;
+let pairedPollTimer = null;
 
 function showToast(msg, isError) {
   TOAST.textContent = msg;
@@ -273,6 +274,34 @@ function stopPolling() {
   if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
 }
 
+function startPairedPolling() {
+  stopPairedPolling();
+  pairedPollTimer = setInterval(async () => {
+    try {
+      const data = await api('/api/session');
+      if (!data.paired) {
+        stopPairedPolling();
+        showToast('🔌 對方已解除配對');
+        setTimeout(returnToPairing, 800);
+      }
+    } catch (_) {}
+  }, 1500);
+}
+
+function stopPairedPolling() {
+  if (pairedPollTimer) { clearInterval(pairedPollTimer); pairedPollTimer = null; }
+}
+
+function returnToPairing() {
+  MAIN_UI.style.display = 'none';
+  PAIRING_SCREEN.style.display = 'flex';
+  PAIR_SUCCESS.style.display = 'none';
+  PAIR_ERROR.style.display = 'none';
+  PAIR_WAITING.style.display = 'none';
+  PAIR_INPUT.value = '';
+  init();
+}
+
 // ─── Init Session ─────────────────────────────────────────
 
 async function init() {
@@ -320,15 +349,10 @@ function showPairError(msg) {
 
 async function unpair() {
   stopPolling();
+  stopPairedPolling();
   try {
     await api('/api/session/unpair', { method: 'POST' });
-    MAIN_UI.style.display = 'none';
-    PAIRING_SCREEN.style.display = 'flex';
-    PAIR_SUCCESS.style.display = 'none';
-    PAIR_ERROR.style.display = 'none';
-    PAIR_WAITING.style.display = 'none';
-    PAIR_INPUT.value = '';
-    startPolling();
+    returnToPairing();
   } catch (e) {
     showToast('解除配對失敗', true);
   }
@@ -336,10 +360,12 @@ async function unpair() {
 
 function enterMainUI(pairedCode) {
   stopPolling();
+  stopPairedPolling();
   PAIRING_SCREEN.style.display = 'none';
   MAIN_UI.style.display = 'block';
   PAIRED_CODE.textContent = pairedCode || '??';
   refreshList();
+  startPairedPolling();
 }
 
 // ─── Files ────────────────────────────────────────────────
