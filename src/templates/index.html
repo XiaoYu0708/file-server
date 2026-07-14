@@ -221,8 +221,8 @@ function getSessionId() {
 
 async function api(path, opts = {}) {
   const res = await fetch(path, {
+    ...opts,
     headers: { 'X-Session-ID': sessionId, ...opts.headers },
-    ...opts
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || '請求失敗');
