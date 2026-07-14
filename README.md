@@ -33,8 +33,16 @@ docker run -d -p 5000:5000 --name file-server xiaoyu0708/file-server
 終端機會顯示 QR Code 與伺服器網址。檔案會暫存在容器內的 `/app/data/rooms/`，容器刪除後資料會消失。若要持久化儲存，加上 volume：
 
 ```bash
-docker run -d -p 5000:5000 -v %cd%/data:/app/data --name file-server xiaoyu0708/file-server
+docker run -d -p 5000:5000 -v /path/to/data:/app/data --name file-server xiaoyu0708/file-server
 ```
+
+### 或用 Docker Compose（推薦，開機自動啟動）
+
+```bash
+docker compose up -d
+```
+
+會自動在背景啟動，並在每次開機時自動運行。檔案存放在同目錄的 `data/` 資料夾。
 
 ### 2. 各裝置開啟網頁
 

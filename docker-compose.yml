@@ -1,0 +1,9 @@
+services:
+  file-server:
+    image: xiaoyu0708/file-server
+    container_name: file-server
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data:/app/data
+    restart: always
