@@ -12,32 +12,41 @@
   }
   .container { max-width: 900px; margin: 0 auto; padding: 24px 16px; }
 
-  .login-screen {
+  .pairing-screen {
     display: flex; align-items: center; justify-content: center;
     min-height: 100vh; padding: 24px;
   }
-  .login-card {
+  .pairing-card {
     background: linear-gradient(135deg, #1e293b, #334155);
     border-radius: 16px; padding: 40px 32px; text-align: center;
     width: 100%; max-width: 400px; border: 1px solid #475569;
   }
-  .login-title { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
-  .login-desc { font-size: 14px; color: #94a3b8; margin-bottom: 24px; }
-  .login-input {
-    width: 100%; background: #0f172a; border: 1px solid #334155;
-    border-radius: 8px; padding: 14px 16px; color: #e2e8f0;
-    font-size: 28px; text-align: center; letter-spacing: 8px;
-    font-family: 'Courier New', monospace; outline: none;
+  .pairing-title { font-size: 18px; font-weight: 600; margin-bottom: 20px; color: #94a3b8; }
+  .my-code-label { font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .my-code {
+    font-size: 64px; font-weight: 800; letter-spacing: 16px;
+    font-family: 'Courier New', monospace; color: #38bdf8;
+    text-shadow: 0 0 40px rgba(56,189,248,0.3);
+    user-select: all; margin-bottom: 24px;
   }
-  .login-input:focus { border-color: #38bdf8; }
-  .login-btn {
-    width: 100%; margin-top: 16px; background: #38bdf8; border: none;
-    border-radius: 8px; padding: 14px; color: #0f172a; font-weight: 700;
-    font-size: 16px; cursor: pointer; transition: background 0.15s;
+  .divider { border: none; border-top: 1px solid #334155; margin: 24px 0; }
+
+  .pair-input-group { display: flex; gap: 8px; }
+  .pair-input {
+    flex: 1; background: #0f172a; border: 1px solid #334155; border-radius: 8px;
+    padding: 12px 16px; color: #e2e8f0; font-size: 20px; text-align: center;
+    letter-spacing: 4px; font-family: 'Courier New', monospace; outline: none;
+    text-transform: uppercase;
   }
-  .login-btn:hover { background: #7dd3fc; }
-  .login-error { color: #ef4444; font-size: 14px; margin-top: 12px; display: none; }
-  .login-hint { font-size: 12px; color: #64748b; margin-top: 16px; }
+  .pair-input:focus { border-color: #38bdf8; }
+  .pair-input::placeholder { font-size: 14px; color: #475569; letter-spacing: 1px; }
+  .pair-btn {
+    background: #38bdf8; border: none; border-radius: 8px; padding: 12px 20px;
+    color: #0f172a; font-weight: 700; font-size: 14px; cursor: pointer; white-space: nowrap;
+  }
+  .pair-btn:hover { background: #7dd3fc; }
+  .pair-error { color: #ef4444; font-size: 13px; margin-top: 10px; display: none; }
+  .pair-success { color: #22c55e; font-size: 13px; margin-top: 10px; display: none; }
 
   .main-ui { display: none; }
 
@@ -46,13 +55,13 @@
     margin-bottom: 20px; padding: 12px 16px; background: #1e293b;
     border-radius: 12px; border: 1px solid #334155;
   }
-  .header-bar .ip { font-size: 12px; color: #94a3b8; }
-  .header-bar .ip span { color: #38bdf8; }
-  .header-bar .logout-btn {
+  .header-bar .paired-with { font-size: 12px; color: #94a3b8; }
+  .header-bar .paired-with span { color: #38bdf8; }
+  .header-bar .unpair-btn {
     background: none; border: 1px solid #475569; color: #94a3b8;
     border-radius: 6px; padding: 6px 12px; font-size: 12px; cursor: pointer;
   }
-  .header-bar .logout-btn:hover { border-color: #ef4444; color: #ef4444; }
+  .header-bar .unpair-btn:hover { border-color: #ef4444; color: #ef4444; }
 
   .panel {
     background: #1e293b; border-radius: 12px; padding: 20px;
@@ -67,6 +76,9 @@
   .upload-area:hover, .upload-area.dragover { border-color: #38bdf8; background: #0f172a; }
   .upload-area p { color: #94a3b8; font-size: 14px; }
   .upload-area .icon { font-size: 32px; margin-bottom: 8px; }
+
+  .mode-toggle { display: flex; gap: 8px; margin-bottom: 12px; }
+  .mode-toggle button { flex: 1; }
 
   .file-item {
     display: flex; align-items: center; padding: 12px 16px;
@@ -89,10 +101,7 @@
   .empty-state { text-align: center; padding: 40px 20px; color: #475569; }
   .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
 
-  .btn {
-    background: #38bdf8; border: none; border-radius: 6px; padding: 8px 16px;
-    color: #0f172a; font-weight: 600; font-size: 14px; cursor: pointer; transition: background 0.15s;
-  }
+  .btn { background: #38bdf8; border: none; border-radius: 6px; padding: 8px 16px; color: #0f172a; font-weight: 600; font-size: 14px; cursor: pointer; transition: background 0.15s; }
   .btn:hover { background: #7dd3fc; }
   .btn-secondary { background: #334155; color: #e2e8f0; }
   .btn-secondary:hover { background: #475569; }
@@ -106,6 +115,7 @@
   .toast.show { opacity: 1; }
 
   @media (max-width: 600px) {
+    .my-code { font-size: 48px; letter-spacing: 12px; }
     .file-item { flex-wrap: wrap; gap: 8px; }
     .file-size { margin: 0; }
   }
@@ -115,30 +125,38 @@
 
 <div class="container">
 
-  <div class="login-screen" id="loginScreen">
-    <div class="login-card">
-      <div class="login-title">🔐 File Server</div>
-      <div class="login-desc">請輸入伺服器終端機顯示的配對碼</div>
-      <input type="text" class="login-input" id="pairInput" maxlength="6" inputmode="numeric"
-             placeholder="000000" oninput="this.value=this.value.replace(/\D/g,'')">
-      <button class="login-btn" onclick="login()">連線</button>
-      <div class="login-error" id="loginError">配對碼錯誤，請重試</div>
-      <div class="login-hint">配對碼請看電腦終端機畫面</div>
+  <div class="pairing-screen" id="pairingScreen">
+    <div class="pairing-card">
+      <div class="pairing-title">📡 你的配對碼</div>
+      <div class="my-code-label">將此碼告訴對方</div>
+      <div class="my-code" id="myCode">----</div>
+
+      <hr class="divider">
+
+      <div class="pairing-title">🔗 輸入對方的配對碼</div>
+      <div class="pair-input-group">
+        <input type="text" class="pair-input" id="pairInput" maxlength="4" placeholder="例如 AB3K"
+               oninput="this.value=this.value.replace(/[^A-Za-z0-9]/g,'').toUpperCase()"
+               onkeydown="if(event.key==='Enter')pairWith()">
+        <button class="pair-btn" onclick="pairWith()">配對</button>
+      </div>
+      <div class="pair-error" id="pairError"></div>
+      <div class="pair-success" id="pairSuccess">✅ 配對成功！正在進入...</div>
     </div>
   </div>
 
   <div class="main-ui" id="mainUI">
 
     <div class="header-bar">
-      <div class="ip">伺服器: <span id="serverIP">{{ local_ip }}:{{ port }}</span></div>
-      <button class="logout-btn" onclick="logout()">🔒 鎖定</button>
+      <div class="paired-with">已與 <span id="pairedCode">----</span> 配對</div>
+      <button class="unpair-btn" onclick="unpair()">🔗 解除配對</button>
     </div>
 
     <div class="panel">
       <h2>📤 上傳</h2>
-      <div style="display:flex; gap:8px; margin-bottom:12px">
-        <button class="btn btn-secondary" id="modeFile" onclick="setMode('file')" style="flex:1">📄 檔案</button>
-        <button class="btn" id="modeFolder" onclick="setMode('folder')" style="flex:1">📁 資料夾</button>
+      <div class="mode-toggle">
+        <button class="btn" id="modeFile" onclick="setMode('file')">📄 檔案</button>
+        <button class="btn btn-secondary" id="modeFolder" onclick="setMode('folder')">📁 資料夾</button>
       </div>
       <div class="upload-area" id="uploadArea">
         <div class="icon">⬆</div>
@@ -159,18 +177,50 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const LS_KEY = 'file_server_code';
+const LS_KEY = 'fs_session';
 const TOAST = document.getElementById('toast');
-const LOGIN_SCREEN = document.getElementById('loginScreen');
+const PAIRING_SCREEN = document.getElementById('pairingScreen');
 const MAIN_UI = document.getElementById('mainUI');
+const MY_CODE = document.getElementById('myCode');
+const PAIR_INPUT = document.getElementById('pairInput');
+const PAIR_ERROR = document.getElementById('pairError');
+const PAIR_SUCCESS = document.getElementById('pairSuccess');
 const FILE_LIST = document.getElementById('fileList');
 const FILE_INPUT = document.getElementById('fileInput');
 const UPLOAD_AREA = document.getElementById('uploadArea');
-const PAIR_INPUT = document.getElementById('pairInput');
-const LOGIN_ERROR = document.getElementById('loginError');
+const PAIRED_CODE = document.getElementById('pairedCode');
 
-let pairCode = '';
+let sessionId = '';
 let uploadMode = 'file';
+
+function showToast(msg, isError) {
+  TOAST.textContent = msg;
+  TOAST.style.color = isError ? '#ef4444' : '#e2e8f0';
+  TOAST.classList.add('show');
+  setTimeout(() => TOAST.classList.remove('show'), 2500);
+}
+
+function getSessionId() {
+  let sid = localStorage.getItem(LS_KEY);
+  if (!sid) {
+    sid = crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = Math.random() * 16 | 0;
+      return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+    localStorage.setItem(LS_KEY, sid);
+  }
+  return sid;
+}
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, {
+    headers: { 'X-Session-ID': sessionId, ...opts.headers },
+    ...opts
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || '請求失敗');
+  return data;
+}
 
 function setMode(mode) {
   uploadMode = mode;
@@ -190,69 +240,71 @@ function setMode(mode) {
   }
 }
 
-function showToast(msg, isError) {
-  TOAST.textContent = msg;
-  TOAST.style.color = isError ? '#ef4444' : '#e2e8f0';
-  TOAST.classList.add('show');
-  setTimeout(() => TOAST.classList.remove('show'), 2500);
-}
+// ─── Init Session ─────────────────────────────────────────
 
-function login() {
-  const code = PAIR_INPUT.value.trim();
-  if (code.length < 4) { LOGIN_ERROR.style.display = 'block'; return; }
-  pairCode = code;
-  fetch('/api/files', { headers: { 'X-Pair-Code': pairCode } })
-    .then(r => {
-      if (r.status === 401) { LOGIN_ERROR.style.display = 'block'; pairCode = ''; throw new Error('auth'); }
-      if (!r.ok) throw new Error('error');
-      return r.json();
-    })
-    .then(files => {
-      LOGIN_ERROR.style.display = 'none';
-      sessionStorage.setItem(LS_KEY, pairCode);
-      LOGIN_SCREEN.style.display = 'none';
-      MAIN_UI.style.display = 'block';
-      renderFiles(files);
-    })
-    .catch(err => {
-      if (err.message !== 'auth') showToast('連線失敗', true);
-    });
-}
-
-function logout() {
-  pairCode = '';
-  sessionStorage.removeItem(LS_KEY);
-  MAIN_UI.style.display = 'none';
-  LOGIN_SCREEN.style.display = 'flex';
-  PAIR_INPUT.value = '';
-  LOGIN_ERROR.style.display = 'none';
-}
-
-// Auto-login if code in session
-(function init() {
-  const saved = sessionStorage.getItem(LS_KEY);
-  if (saved) {
-    pairCode = saved;
-    fetch('/api/files', { headers: { 'X-Pair-Code': pairCode } })
-      .then(r => {
-        if (r.status === 401) { sessionStorage.removeItem(LS_KEY); pairCode = ''; return; }
-        if (!r.ok) throw new Error();
-        return r.json();
-      })
-      .then(files => {
-        if (files) {
-          LOGIN_SCREEN.style.display = 'none';
-          MAIN_UI.style.display = 'block';
-          renderFiles(files);
-        }
-      })
-      .catch(() => {});
+async function init() {
+  sessionId = getSessionId();
+  try {
+    const data = await api('/api/session');
+    MY_CODE.textContent = data.code;
+    if (data.paired) {
+      enterMainUI(data.paired_info ? data.paired_info.code : '');
+    }
+  } catch (e) {
+    showToast('無法連接伺服器', true);
   }
-})();
+}
+
+// ─── Pairing ──────────────────────────────────────────────
+
+async function pairWith() {
+  const code = PAIR_INPUT.value.trim().toUpperCase();
+  if (code.length < 4) { showPairError('請輸入完整的 4 位配對碼'); return; }
+  PAIR_ERROR.style.display = 'none';
+  try {
+    const data = await api('/api/session/pair', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code })
+    });
+    PAIR_SUCCESS.style.display = 'block';
+    setTimeout(() => enterMainUI(data.paired_code), 600);
+  } catch (e) {
+    showPairError(e.message);
+  }
+}
+
+function showPairError(msg) {
+  PAIR_ERROR.textContent = '❌ ' + msg;
+  PAIR_ERROR.style.display = 'block';
+}
+
+async function unpair() {
+  try {
+    await api('/api/session/unpair', { method: 'POST' });
+    MAIN_UI.style.display = 'none';
+    PAIRING_SCREEN.style.display = 'flex';
+    PAIR_SUCCESS.style.display = 'none';
+    PAIR_ERROR.style.display = 'none';
+    PAIR_INPUT.value = '';
+    init();
+  } catch (e) {
+    showToast('解除配對失敗', true);
+  }
+}
+
+function enterMainUI(pairedCode) {
+  PAIRING_SCREEN.style.display = 'none';
+  MAIN_UI.style.display = 'block';
+  PAIRED_CODE.textContent = pairedCode || '??';
+  refreshList();
+}
+
+// ─── Files ────────────────────────────────────────────────
 
 function renderFiles(files) {
   if (!files || files.length === 0) {
-    FILE_LIST.innerHTML = '<div class="empty-state"><div class="icon">📭</div><p>共享目錄中還沒有檔案</p></div>';
+    FILE_LIST.innerHTML = '<div class="empty-state"><div class="icon">📭</div><p>還沒有檔案</p></div>';
     return;
   }
   let html = '';
@@ -275,7 +327,12 @@ function renderFiles(files) {
 function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function escapeJs(s) { return s.replace(/'/g,"\\'").replace(/"/g,'&quot;'); }
 
-// Upload
+function refreshList() {
+  api('/api/files')
+    .then(files => renderFiles(files))
+    .catch(() => showToast('重新整理失敗', true));
+}
+
 UPLOAD_AREA.addEventListener('click', () => FILE_INPUT.click());
 UPLOAD_AREA.addEventListener('dragover', e => { e.preventDefault(); UPLOAD_AREA.classList.add('dragover'); });
 UPLOAD_AREA.addEventListener('dragleave', () => UPLOAD_AREA.classList.remove('dragover'));
@@ -294,16 +351,16 @@ function doUpload(files) {
     formData.append('file', f, path);
   }
   fetch('/api/upload', {
-    method: 'POST', headers: { 'X-Pair-Code': pairCode }, body: formData
+    method: 'POST', headers: { 'X-Session-ID': sessionId }, body: formData
   })
-  .then(r => { if (!r.ok) throw new Error(); return r.json(); })
-  .then(data => { showToast(data.message); refreshList(); })
+  .then(r => r.json())
+  .then(data => { showToast(data.message || '上傳完成'); refreshList(); })
   .catch(() => showToast('上傳失敗', true));
 }
 
 function downloadFile(name) {
-  fetch('/api/files/' + encodeURIComponent(name) + '?t=' + Date.now(), {
-    headers: { 'X-Pair-Code': pairCode }
+  fetch('/api/files/' + encodeURIComponent(name) + '?sid=' + sessionId, {
+    headers: { 'X-Session-ID': sessionId }
   })
   .then(r => { if (!r.ok) throw new Error(); return r.blob(); })
   .then(blob => {
@@ -319,19 +376,14 @@ function downloadFile(name) {
 function deleteFile(name) {
   if (!confirm('確定刪除「' + name + '」？')) return;
   fetch('/api/files/' + encodeURIComponent(name), {
-    method: 'DELETE', headers: { 'X-Pair-Code': pairCode }
+    method: 'DELETE', headers: { 'X-Session-ID': sessionId }
   })
-  .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+  .then(r => r.json())
   .then(data => { showToast(data.message); refreshList(); })
   .catch(() => showToast('刪除失敗', true));
 }
 
-function refreshList() {
-  fetch('/api/files', { headers: { 'X-Pair-Code': pairCode } })
-    .then(r => r.json())
-    .then(files => renderFiles(files))
-    .catch(() => showToast('重新整理失敗', true));
-}
+init();
 </script>
 
 </body>

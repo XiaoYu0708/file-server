@@ -6,6 +6,7 @@ import socket
 import random
 import string
 import mimetypes
+import tempfile
 from pathlib import Path
 from datetime import datetime
 from functools import wraps
@@ -24,130 +25,149 @@ else:
     app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024
 
-SHARED_PATH = None
-PAIR_CODE = None
-LOCAL_IP = None
-PORT = 5000
+BASE_DIR = Path(tempfile.gettempdir()) / 'FileServerData'
+ROOMS_DIR = BASE_DIR / 'rooms'
+ROOMS_DIR.mkdir(parents=True, exist_ok=True)
 
+sessions = {}
 
-def find_free_port(start=5000, end=5100):
-    for port in range(start, end + 1):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            try:
-                s.bind(('0.0.0.0', port))
-                return port
-            except OSError:
-                continue
-    return start
+def generate_code():
+    chars = string.ascii_uppercase + string.digits
+    return ''.join(random.choices(chars, k=4))
 
+def find_session_by_code(code):
+    for s in sessions.values():
+        if s['code'] == code:
+            return s
+    return None
 
-def pick_shared_path():
-    try:
-        import tkinter as tk
-        from tkinter import filedialog
-        root = tk.Tk()
-        root.withdraw()
-        root.attributes('-topmost', True)
-        path = filedialog.askdirectory(title='選擇共享目錄（所有上傳的檔案將存放在此）')
-        root.destroy()
-        if path:
-            return Path(path).resolve()
-    except Exception:
-        pass
-    default = Path("C:\\FileShare")
-    print(f"使用預設路徑: {default}")
-    return default
+def get_or_create_session(sid):
+    if sid not in sessions:
+        sessions[sid] = {
+            'id': sid,
+            'code': generate_code(),
+            'paired_id': None,
+            'created_at': datetime.now()
+        }
+    return sessions[sid]
 
+def get_room(session):
+    pid = session['paired_id']
+    if not pid:
+        return None
+    key = ''.join(sorted([session['id'], pid]))
+    return key
 
-def generate_pair_code():
-    return ''.join(random.choices(string.digits, k=6))
+def get_room_dir(room_key):
+    d = ROOMS_DIR / room_key
+    d.mkdir(parents=True, exist_ok=True)
+    return d
 
-
-def get_local_ip():
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(('8.8.8.8', 80))
-        ip = s.getsockname()[0]
-        s.close()
-        return ip
-    except Exception:
-        return '127.0.0.1'
-
-
-def require_auth(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        code = request.headers.get('X-Pair-Code') or request.args.get('code')
-        if not code or code != PAIR_CODE:
-            if request.is_json or request.path.startswith('/api/'):
-                return jsonify({'error': '無效的配對碼'}), 401
-            abort(401)
-        return f(*args, **kwargs)
-    return decorated
-
-
-def safe_resolve(path):
-    full = (SHARED_PATH / path).resolve()
-    if not str(full).startswith(str(SHARED_PATH)):
+def safe_resolve(base, path):
+    full = (base / path).resolve()
+    if not str(full).startswith(str(base.resolve())):
         return None
     return full
 
+def require_session(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        sid = request.headers.get('X-Session-ID') or request.args.get('sid')
+        if not sid:
+            return jsonify({'error': '缺少 Session ID'}), 401
+        session = get_or_create_session(sid)
+        return f(session, *args, **kwargs)
+    return decorated
 
-def get_file_list(dir_path=None):
-    base = SHARED_PATH if dir_path is None else (SHARED_PATH / dir_path)
-    if not base.exists() or not base.is_dir():
-        return []
-
-    files = []
-    for f in sorted(base.iterdir(), key=lambda x: (not x.is_dir(), x.name.lower())):
-        rel = str(f.relative_to(SHARED_PATH))
-        files.append({
-            'name': rel,
-            'is_dir': f.is_dir(),
-            'size': f.stat().st_size if f.is_file() else 0,
-            'modified': datetime.fromtimestamp(f.stat().st_mtime).isoformat()
-        })
-    return files
-
-
-# ─── Web UI ───────────────────────────────────────────────
-
-@app.route('/')
-def index():
-    files = get_file_list()
-    return render_template('index.html',
-                         local_ip=LOCAL_IP,
-                         port=PORT,
-                         files=files)
+def require_paired(f):
+    @wraps(f)
+    @require_session
+    def decorated(session, *args, **kwargs):
+        if not session['paired_id']:
+            return jsonify({'error': '尚未配對'}), 403
+        room = get_room(session)
+        return f(session, room, *args, **kwargs)
+    return decorated
 
 
-# ─── API - 配對 ───────────────────────────────────────────
+# ─── API - Session ─────────────────────────────────────────
 
-@app.route('/api/pair')
-def get_pair():
+@app.route('/api/session')
+@require_session
+def api_session(session):
+    paired_info = None
+    if session['paired_id'] and session['paired_id'] in sessions:
+        paired_info = {'code': sessions[session['paired_id']]['code']}
     return jsonify({
-        'code': PAIR_CODE,
-        'ip': LOCAL_IP,
-        'port': PORT
+        'session_id': session['id'],
+        'code': session['code'],
+        'paired': session['paired_id'] is not None,
+        'paired_info': paired_info
     })
+
+
+@app.route('/api/session/pair', methods=['POST'])
+@require_session
+def api_pair(session):
+    data = request.get_json()
+    if not data or 'code' not in data:
+        return jsonify({'error': '需要 code 參數'}), 400
+    
+    target = find_session_by_code(data['code'])
+    if not target:
+        return jsonify({'error': '配對碼不存在'}), 404
+    if target['id'] == session['id']:
+        return jsonify({'error': '不能與自己配對'}), 400
+    if target['paired_id']:
+        return jsonify({'error': '該裝置已配對'}), 409
+
+    session['paired_id'] = target['id']
+    target['paired_id'] = session['id']
+
+    room = get_room(session)
+    get_room_dir(room)
+
+    return jsonify({
+        'paired': True,
+        'paired_code': target['code'],
+        'room': room
+    })
+
+
+@app.route('/api/session/unpair', methods=['POST'])
+@require_session
+def api_unpair(session):
+    pid = session['paired_id']
+    if pid and pid in sessions:
+        sessions[pid]['paired_id'] = None
+    session['paired_id'] = None
+    return jsonify({'paired': False})
 
 
 # ─── API - 檔案列表 ───────────────────────────────────────
 
 @app.route('/api/files')
-@require_auth
-def list_files():
-    prefix = request.args.get('dir', '')
-    files = get_file_list(prefix) if prefix else get_file_list()
+@require_paired
+def list_files(session, room):
+    room_dir = get_room_dir(room)
+    files = []
+    for f in sorted(room_dir.iterdir(), key=lambda x: (not x.is_dir(), x.name.lower())):
+        files.append({
+            'name': f.name,
+            'is_dir': f.is_dir(),
+            'size': f.stat().st_size if f.is_file() else 0,
+            'modified': datetime.fromtimestamp(f.stat().st_mtime).isoformat()
+        })
     return jsonify(files)
 
 
 # ─── API - 下載 ───────────────────────────────────────────
 
 @app.route('/api/files/<path:filepath>', methods=['GET'])
-@require_auth
-def download_file(filepath):
-    file_path = safe_resolve(filepath)
+@require_paired
+def download_file(session, room, filepath):
+    room_dir = get_room_dir(room)
+    file_path = safe_resolve(room_dir, filepath)
     if not file_path or not file_path.exists():
         abort(404)
     if file_path.is_file():
@@ -168,18 +188,19 @@ def download_file(filepath):
 # ─── API - 上傳 ───────────────────────────────────────────
 
 @app.route('/api/upload', methods=['POST'])
-@require_auth
-def upload_file():
+@require_paired
+def upload_file(session, room):
     if 'file' not in request.files:
         return jsonify({'error': '未提供檔案'}), 400
+    room_dir = get_room_dir(room)
     files = request.files.getlist('file')
     uploaded = []
     for f in files:
         if f.filename == '':
             continue
         rel = f.filename.replace('\\', '/')
-        file_path = (SHARED_PATH / rel).resolve()
-        if not str(file_path).startswith(str(SHARED_PATH)):
+        file_path = (room_dir / rel).resolve()
+        if not str(file_path).startswith(str(room_dir.resolve())):
             return jsonify({'error': '路徑不合法'}), 403
         file_path.parent.mkdir(parents=True, exist_ok=True)
         f.save(str(file_path))
@@ -190,9 +211,10 @@ def upload_file():
 # ─── API - 刪除 ───────────────────────────────────────────
 
 @app.route('/api/files/<path:filepath>', methods=['DELETE'])
-@require_auth
-def delete_file(filepath):
-    file_path = safe_resolve(filepath)
+@require_paired
+def delete_file(session, room, filepath):
+    room_dir = get_room_dir(room)
+    file_path = safe_resolve(room_dir, filepath)
     if not file_path:
         return jsonify({'error': '路徑不合法'}), 403
     if not file_path.exists():
@@ -205,32 +227,37 @@ def delete_file(filepath):
     return jsonify({'message': f'{filepath} 已刪除'})
 
 
+# ─── Web UI ───────────────────────────────────────────────
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+
 # ─── 錯誤處理 ─────────────────────────────────────────────
 
 @app.errorhandler(401)
 def unauthorized(e):
-    return jsonify({'error': '無效的配對碼'}), 401
-
+    return jsonify({'error': '無效的 Session'}), 401
 
 @app.errorhandler(404)
 def not_found(e):
     return jsonify({'error': '檔案不存在'}), 404
-
 
 @app.errorhandler(413)
 def too_large(e):
     return jsonify({'error': '檔案過大，限制 500MB'}), 413
 
 
-def print_server_banner():
+# ─── 終端機 Banner ──────────────────────────────────────
+
+def print_banner():
     url = f"http://{LOCAL_IP}:{PORT}"
     print(f"""
 ┌─────────────────────────────────────────────────────┐
-│               File Server 已啟動                    │
+│                 File Server 已啟動                  │
 │                                                     │
-│  Web 介面:  {url}         │
-│  配對碼:     {PAIR_CODE}                                    │
-│  共享目錄:   {SHARED_PATH}│
+│  {url}               │
 │                                                     │""")
     try:
         import qrcode.constants
@@ -243,10 +270,10 @@ def print_server_banner():
             for j in range(len(m[i])):
                 top = m[i][j]
                 bot = m[i+1][j] if i+1 < len(m) else False
-                if top and bot:     line += '█'
+                if top and bot: line += '█'
                 elif top and not bot: line += '▀'
                 elif not top and bot: line += '▄'
-                else:               line += ' '
+                else: line += ' '
             print(f"  │ {line} │")
     except Exception:
         pass
@@ -257,15 +284,34 @@ def print_server_banner():
     """)
 
 
+def find_free_port(start=5000, end=5100):
+    for port in range(start, end + 1):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                s.bind(('0.0.0.0', port))
+                return port
+            except OSError:
+                continue
+    return start
+
+
+def get_local_ip():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(('8.8.8.8', 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return '127.0.0.1'
+
+
 # ─── 啟動 ─────────────────────────────────────────────────
 
 if __name__ == '__main__':
-    SHARED_PATH = pick_shared_path()
-    PAIR_CODE = generate_pair_code()
     LOCAL_IP = get_local_ip()
     PORT = find_free_port()
     if PORT != 5000:
         print(f"⚠️  Port 5000 已被占用，自動切換至 Port {PORT}")
-    print(f"\n✅ 共享目錄: {SHARED_PATH}")
-    print_server_banner()
+    print_banner()
     app.run(host='0.0.0.0', port=PORT, debug=False)
