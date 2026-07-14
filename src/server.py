@@ -1,12 +1,15 @@
 import os
 import io
+import time
+import threading
+import shutil
 import zipfile
 import socket
 import random
 import string
 import mimetypes
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import wraps
 
 from flask import Flask, render_template, request, jsonify, send_file, abort
@@ -131,10 +134,15 @@ def api_pair(session):
 @app.route('/api/session/unpair', methods=['POST'])
 @require_session
 def api_unpair(session):
+    room = get_room(session)
     pid = session['paired_id']
     if pid and pid in sessions:
         sessions[pid]['paired_id'] = None
     session['paired_id'] = None
+    if room:
+        room_dir = get_room_dir(room)
+        if room_dir.exists():
+            shutil.rmtree(str(room_dir))
     return jsonify({'paired': False})
 
 
@@ -216,7 +224,6 @@ def delete_file(session, room, filepath):
     if file_path.is_file():
         file_path.unlink()
     else:
-        import shutil
         shutil.rmtree(str(file_path))
     return jsonify({'message': f'{filepath} 已刪除'})
 
@@ -300,9 +307,37 @@ def get_local_ip():
         return '127.0.0.1'
 
 
+# ─── 自動清理 ─────────────────────────────────────────────
+
+def cleanup_old_files():
+    while True:
+        time.sleep(3600)
+        now = time.time()
+        cutoff = now - 86400
+        for room_dir in ROOMS_DIR.iterdir():
+            if not room_dir.is_dir():
+                continue
+            for f in list(room_dir.iterdir()):
+                try:
+                    if f.stat().st_mtime < cutoff:
+                        if f.is_file():
+                            f.unlink()
+                        else:
+                            shutil.rmtree(str(f))
+                except Exception:
+                    pass
+            try:
+                if not any(room_dir.iterdir()):
+                    room_dir.rmdir()
+            except Exception:
+                pass
+
+
 # ─── 啟動 ─────────────────────────────────────────────────
 
 if __name__ == '__main__':
+    t = threading.Thread(target=cleanup_old_files, daemon=True)
+    t.start()
     LOCAL_IP = get_local_ip()
     PORT = find_free_port()
     if PORT != 5000:
