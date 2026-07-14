@@ -1,5 +1,7 @@
 # File Server
 
+[![Docker Hub](https://img.shields.io/badge/docker-xiaoyu0708/file--server-2496ED?logo=docker)](https://hub.docker.com/r/xiaoyu0708/file-server)
+
 區域網路檔案交換工具。不需安裝任何 App，打開瀏覽器即可在多個裝置間互傳檔案。
 
 ## 運作方式
@@ -22,13 +24,17 @@
 
 ## 使用方式
 
-### 1. 啟動伺服器
+### 1. 啟動伺服器 (Docker)
 
-```cmd
-雙擊 file_server.exe
+```bash
+docker run -d -p 5000:5000 --name file-server xiaoyu0708/file-server
 ```
 
-終端機會顯示 QR Code 與伺服器網址。
+終端機會顯示 QR Code 與伺服器網址。檔案會暫存在容器內的 `/app/data/rooms/`，容器刪除後資料會消失。若要持久化儲存，加上 volume：
+
+```bash
+docker run -d -p 5000:5000 -v %cd%/data:/app/data --name file-server xiaoyu0708/file-server
+```
 
 ### 2. 各裝置開啟網頁
 
@@ -99,19 +105,8 @@ Phone A 輸入 Phone B 的碼，或 Phone B 輸入 Phone A 的碼，兩邊即完
 
 ## 從原始碼建置
 
-需要 Docker Desktop。
-
-```powershell
-.\build.ps1
-```
-
-或手動：
-
-```powershell
-docker build -t file-server-builder .
-$id = docker create file-server-builder
-docker cp ${id}:/src/dist/file_server.exe dist/
-docker rm $id
+```bash
+docker build -t file-server .
 ```
 
 ## 網路需求
@@ -124,12 +119,10 @@ docker rm $id
 
 ```
 file_server/
-├── dist/file_server.exe     ← 執行檔（直接執行）
 ├── src/
 │   ├── server.py            ← Flask 伺服器主程式
 │   └── templates/index.html ← Web 介面
-├── Dockerfile               ← Wine + PyInstaller 交叉編譯
-├── build.ps1                ← 一鍵建置腳本
+├── Dockerfile               ← Docker 映像建置檔
 └── requirements.txt         ← Python 依賴
 ```
 
