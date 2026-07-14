@@ -26,14 +26,14 @@
 
 ### 1. 啟動伺服器 (Docker)
 
+**⚠️ 注意：** 檔案預設存在容器內部的 `/app/data/rooms/`，不加 `-v` 的話「容器刪掉檔案就消失」。
+
 ```bash
+# 一般啟動（檔案存容器內，刪容器會遺失）
 docker run -d -p 5000:5000 --name file-server xiaoyu0708/file-server
-```
 
-終端機會顯示 QR Code 與伺服器網址。檔案會暫存在容器內的 `/app/data/rooms/`，容器刪除後資料會消失。若要持久化儲存，加上 volume：
-
-```bash
-docker run -d -p 5000:5000 -v /path/to/data:/app/data --name file-server xiaoyu0708/file-server
+# 掛載 volume 持久化（檔案存主機 ./data/ 目錄，推薦）
+docker run -d -p 5000:5000 -v ./data:/app/data --name file-server xiaoyu0708/file-server
 ```
 
 ### 或用 Docker Compose（推薦，開機自動啟動）
@@ -127,11 +127,12 @@ docker build -t file-server .
 
 ```
 file_server/
+├── docker-compose.yml       ← Docker Compose（推薦啟動方式）
+├── Dockerfile               ← Docker 映像建置檔
+├── requirements.txt         ← Python 依賴
 ├── src/
 │   ├── server.py            ← Flask 伺服器主程式
 │   └── templates/index.html ← Web 介面
-├── Dockerfile               ← Docker 映像建置檔
-└── requirements.txt         ← Python 依賴
 ```
 
 ## License
