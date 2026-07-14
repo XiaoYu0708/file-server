@@ -6,7 +6,6 @@ import socket
 import random
 import string
 import mimetypes
-import tempfile
 from pathlib import Path
 from datetime import datetime
 from functools import wraps
@@ -25,7 +24,10 @@ else:
     app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024
 
-BASE_DIR = Path(tempfile.gettempdir()) / 'FileServerData'
+if getattr(sys, 'frozen', False):
+    BASE_DIR = Path(sys.executable).parent / 'data'
+else:
+    BASE_DIR = Path.cwd() / 'data'
 ROOMS_DIR = BASE_DIR / 'rooms'
 ROOMS_DIR.mkdir(parents=True, exist_ok=True)
 
