@@ -138,6 +138,10 @@
       <div class="my-code-label">將此碼告訴對方</div>
       <div class="my-code" id="myCode">----</div>
 
+      <div class="pair-waiting" id="pairWaiting" style="display:none; font-size:13px; color:#64748b; margin-bottom:20px">
+        ⏳ 等待對方配對中...
+      </div>
+
       <hr class="divider">
 
       <div class="pairing-title">🔗 輸入對方的配對碼</div>
@@ -192,6 +196,7 @@ const MY_CODE = document.getElementById('myCode');
 const PAIR_INPUT = document.getElementById('pairInput');
 const PAIR_ERROR = document.getElementById('pairError');
 const PAIR_SUCCESS = document.getElementById('pairSuccess');
+const PAIR_WAITING = document.getElementById('pairWaiting');
 const FILE_LIST = document.getElementById('fileList');
 const FILE_INPUT = document.getElementById('fileInput');
 const UPLOAD_AREA = document.getElementById('uploadArea');
@@ -199,6 +204,7 @@ const PAIRED_CODE = document.getElementById('pairedCode');
 
 let sessionId = '';
 let uploadMode = 'file';
+let pollTimer = null;
 
 function showToast(msg, isError) {
   TOAST.textContent = msg;
@@ -247,6 +253,26 @@ function setMode(mode) {
   }
 }
 
+// ─── Polling ──────────────────────────────────────────────
+
+function startPolling() {
+  stopPolling();
+  pollTimer = setInterval(async () => {
+    try {
+      const data = await api('/api/session');
+      if (data.paired) {
+        stopPolling();
+        PAIR_WAITING.style.display = 'none';
+        enterMainUI(data.paired_info ? data.paired_info.code : '');
+      }
+    } catch (_) {}
+  }, 1500);
+}
+
+function stopPolling() {
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+}
+
 // ─── Init Session ─────────────────────────────────────────
 
 async function init() {
@@ -256,6 +282,8 @@ async function init() {
     MY_CODE.textContent = data.code;
     if (data.paired) {
       enterMainUI(data.paired_info ? data.paired_info.code : '');
+    } else {
+      startPolling();
     }
   } catch (e) {
     showToast('無法連接伺服器', true);
@@ -277,7 +305,11 @@ async function pairWith() {
     PAIR_SUCCESS.style.display = 'block';
     setTimeout(() => enterMainUI(data.paired_code), 600);
   } catch (e) {
-    showPairError(e.message);
+    if (e.message === '該裝置已配對') {
+      showPairError('該裝置已與其他人配對');
+    } else {
+      showPairError(e.message);
+    }
   }
 }
 
@@ -287,20 +319,23 @@ function showPairError(msg) {
 }
 
 async function unpair() {
+  stopPolling();
   try {
     await api('/api/session/unpair', { method: 'POST' });
     MAIN_UI.style.display = 'none';
     PAIRING_SCREEN.style.display = 'flex';
     PAIR_SUCCESS.style.display = 'none';
     PAIR_ERROR.style.display = 'none';
+    PAIR_WAITING.style.display = 'none';
     PAIR_INPUT.value = '';
-    init();
+    startPolling();
   } catch (e) {
     showToast('解除配對失敗', true);
   }
 }
 
 function enterMainUI(pairedCode) {
+  stopPolling();
   PAIRING_SCREEN.style.display = 'none';
   MAIN_UI.style.display = 'block';
   PAIRED_CODE.textContent = pairedCode || '??';
